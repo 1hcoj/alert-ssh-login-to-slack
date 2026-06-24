@@ -1,0 +1,19 @@
+[Unit]
+Description=eBPF SSH login alert to Slack
+After=network-online.target ssh.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+ExecStart=/usr/local/sbin/ssh-login-alert
+EnvironmentFile=-/etc/ssh-login-alert.env
+Restart=on-failure
+RestartSec=5s
+NoNewPrivileges=false
+
+# Loading and attaching eBPF programs requires elevated privileges.
+AmbientCapabilities=CAP_BPF CAP_PERFMON CAP_SYS_RESOURCE
+CapabilityBoundingSet=CAP_BPF CAP_PERFMON CAP_SYS_RESOURCE
+
+[Install]
+WantedBy=multi-user.target

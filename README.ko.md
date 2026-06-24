@@ -2,7 +2,7 @@
 
 [English README](./README.md)
 
-`cilium/ebpf`로 OpenSSH 세션 시작을 감지하고 Slack Web API의 `chat.postMessage`로 알림을 보내는 Linux용 에이전트입니다.
+OpenSSH Login을 감지하고 Slack으로 알림을 전송하는 Linux 전용 에이전트 프로그램입니다.
 
 ## 탐지 방식
 
@@ -25,8 +25,6 @@
 - 호스트명
 - 로그인 시각
 - `sshd` PID
-
-조직의 개인정보, 보안, 로그 보관 정책을 검토한 뒤 사용하세요. Slack Bot Token은 소스 코드나 공개 저장소에 포함하면 안 됩니다.
 
 ## 요구 사항
 

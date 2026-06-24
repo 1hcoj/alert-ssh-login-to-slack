@@ -2,7 +2,7 @@
 
 [한국어 문서](./README.ko.md)
 
-A Linux agent that detects successful OpenSSH session starts with eBPF and sends an alert to Slack using the Slack Web API `chat.postMessage` method.
+A Linux agent that detects OpenSSH session starts and sends an alert to Slack.
 
 ## How detection works
 
@@ -25,8 +25,6 @@ When deployed, this agent sends SSH login metadata to Slack:
 - host name,
 - login timestamp,
 - `sshd` PID.
-
-Do not enable this without considering your organization's privacy, security, and retention requirements. Keep Slack tokens out of source control.
 
 ## Requirements
 

@@ -126,6 +126,6 @@ Why these options are used:
 
 ## License
 
-This repository is licensed under the MIT License. See [LICENSE](./LICENSE).
+This project is distributed under the MIT License. See the [LICENSE](./LICENSE) file for details.
 
-The eBPF C source also declares `Dual MIT/GPL` at load time so the kernel can treat the program as GPL-compatible when needed for eBPF helper access.
+For compatibility with the Linux kernel's eBPF subsystem, the eBPF programs declare the license string as Dual MIT/GPL at load time. This allows the kernel to recognize the programs as GPL-compatible and enables access to GPL-restricted eBPF helpers where required. The overall project, however, remains distributed under the MIT License.

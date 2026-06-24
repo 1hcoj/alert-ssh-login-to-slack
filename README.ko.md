@@ -126,6 +126,6 @@ docker run -d \
 
 ## 라이선스
 
-이 저장소는 MIT License로 공개하는 구성을 추천하며, 현재 [LICENSE](./LICENSE)에 MIT License를 추가했습니다.
+이 프로젝트는 MIT License에 따라 배포됩니다. 자세한 내용은 [LICENSE](./LICENSE) 파일을 참고하시기 바랍니다.
 
-단, eBPF C 소스는 커널이 GPL 호환 프로그램으로 인식할 수 있도록 로딩 시점 license string을 `Dual MIT/GPL`로 선언합니다. 이는 eBPF helper 접근 호환성을 위한 선언입니다.
+단, eBPF 프로그램은 커널이 GPL 호환 프로그램으로 인식할 수 있도록 로딩 시점에 Dual MIT/GPL 라이선스 문자열을 선언합니다. 이는 GPL 전용 eBPF helper 및 관련 기능과의 호환성을 확보하기 위한 것으로, 프로젝트 전체의 배포 라이선스는 MIT License를 따릅니다.

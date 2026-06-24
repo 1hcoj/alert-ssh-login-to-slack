@@ -48,8 +48,8 @@ make build
 Docker 이미지를 생성하고 push합니다.
 
 ```bash
-docker build -t 1hcoj/alert-ssh-login-to-slack:latest .
-docker push 1hcoj/alert-ssh-login-to-slack:latest
+docker build -t <your-image-name> . 
+docker push <your-image-name>
 ```
 
 Dockerfile은 multi-stage build를 사용합니다. builder image에서는 Go, clang/llvm, libbpf 헤더, make를 설치하고, runtime image에는 컴파일된 에이전트와 CA 인증서, timezone 데이터만 포함합니다.

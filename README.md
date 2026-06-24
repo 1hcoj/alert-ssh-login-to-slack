@@ -48,8 +48,8 @@ make build
 Build and push the Docker image:
 
 ```bash
-docker build -t 1hcoj/alert-ssh-login-to-slack:latest .
-docker push 1hcoj/alert-ssh-login-to-slack:latest
+docker build -t <your-image-name> . 
+docker push <your-image-name>
 ```
 
 The Dockerfile uses a multi-stage build. The builder image installs Go, clang/llvm, libbpf headers, and make. The runtime image contains only the compiled agent plus CA certificates and timezone data.

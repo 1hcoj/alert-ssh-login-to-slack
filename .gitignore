@@ -1,3 +1,4 @@
 /bin/
 /ssh-login-alert
 *.o
+bpf_bpf*

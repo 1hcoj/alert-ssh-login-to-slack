@@ -13,7 +13,7 @@
 3. PID, UID, 접속 정보를 ring buffer를 통해 Go 프로그램에 전달합니다.
 4. Go 프로그램이 UID를 로컬 계정명으로 변환하고 Slack으로 알림을 전송합니다.
 
-![slack-capture](slack-capture.png)
+![slack-capture](images/slack-capture.png)
 
 ## 개인정보 고지
 

@@ -13,7 +13,7 @@ The eBPF program attaches to the `syscalls:sys_enter_execve` tracepoint. When an
 3. sends PID, UID, and connection metadata to Go through a ring buffer,
 4. resolves the UID to a local account name and sends the alert to Slack.
 
-![slack-capture](slack-capture.png)
+![slack-capture](images/slack-capture.png)
 
 ## Privacy notice
 

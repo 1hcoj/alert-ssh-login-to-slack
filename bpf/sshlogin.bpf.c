@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: (MIT OR GPL-2.0-only)
 //go:build ignore
 
 #include <linux/bpf.h>

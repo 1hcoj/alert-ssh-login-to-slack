@@ -1,0 +1,4 @@
+.git
+bin
+*.o
+.DS_Store

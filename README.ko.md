@@ -13,17 +13,7 @@
 3. PID, UID, 접속 정보를 ring buffer를 통해 Go 프로그램에 전달합니다.
 4. Go 프로그램이 UID를 로컬 계정명으로 변환하고 Slack으로 알림을 전송합니다.
 
-이 방식은 배포판의 `sshd` 바이너리에서 내부 심볼이 제거되어 있어도 동작하며, OpenSSH 내부 구조체 오프셋에 의존하지 않습니다.
-
-## 제한 사항
-
-- 알림 시점은 TCP 연결 시점이 아니라 인증 성공 후 셸 또는 원격 명령이 시작되는 시점입니다.
-- SSH 인증 실패는 알리지 않습니다.
-- `internal-sftp`처럼 `sshd` 내부에서 모두 처리되는 세션은 `execve` 이벤트가 없어 탐지되지 않을 수 있습니다.
-- `SSH_CONNECTION`은 처음 64개 환경 변수 안에서 탐색합니다. 필요하면 `bpf/sshlogin.bpf.c`의 `MAX_ENV_VARS` 값을 조정할 수 있습니다.
-- 이벤트 시간은 Go 프로그램이 이벤트를 받은 시점의 호스트 현재 시간으로 기록합니다.
-
-모든 로그인 유형과 인증 실패까지 감사해야 한다면 Linux Audit의 `USER_AUTH`, `USER_LOGIN` 레코드를 함께 사용하는 구성이 더 적합합니다.
+![slack-capture](slack-capture.png)
 
 ## 개인정보 고지
 
@@ -41,24 +31,28 @@
 ## 요구 사항
 
 - Linux 5.8 이상 권장
-- Go 1.24 이상
-- clang/llvm
-- libbpf 개발 헤더 (`libbpf-dev`)
-- root 또는 eBPF 로딩과 perf event에 필요한 capability
+- Docker
+- Docker 없이 로컬 빌드할 경우 Go 1.24 이상, clang/llvm, libbpf 개발 헤더
+- root, privileged 컨테이너 실행, 또는 eBPF에 필요한 capability와 커널 파일시스템 마운트
 
-Ubuntu:
-
-```bash
-sudo apt-get install -y clang llvm libbpf-dev make
-```
-
-## 빌드
+## 로컬 빌드
 
 ```bash
 make build
 ```
 
 `go generate`가 eBPF C 프로그램을 컴파일하고, `bpf2go`로 생성된 객체를 Go 코드에 내장합니다.
+
+## Docker image 생성 및 push
+
+Docker 이미지를 생성하고 push합니다.
+
+```bash
+docker build -t 1hcoj/alert-ssh-login-to-slack:latest .
+docker push 1hcoj/alert-ssh-login-to-slack:latest
+```
+
+Dockerfile은 multi-stage build를 사용합니다. builder image에서는 Go, clang/llvm, libbpf 헤더, make를 설치하고, runtime image에는 컴파일된 에이전트와 CA 인증서, timezone 데이터만 포함합니다.
 
 ## Slack `chat.postMessage` 설정
 
@@ -69,49 +63,49 @@ make build
 5. 알림을 받을 채널에 앱을 초대합니다: `/invite @앱이름`
 6. Channel ID(`C...`)를 복사합니다.
 
-실행:
-
-```bash
-export SLACK_BOT_TOKEN='xoxb-...'
-export SLACK_CHANNEL_ID='C0123456789'
-sudo --preserve-env=SLACK_BOT_TOKEN,SLACK_CHANNEL_ID ./bin/ssh-login-alert
-```
+## Docker로 실행
 
 Slack 전송 없이 이벤트만 확인하려면:
 
 ```bash
-sudo ./bin/ssh-login-alert -dry-run
+docker run --rm \
+  --name ssh-login-alert \
+  --privileged \
+  --pid=host \
+  -v /sys/kernel/tracing:/sys/kernel/tracing:rw \
+  -v /sys/fs/bpf:/sys/fs/bpf:rw \
+  -v /etc/passwd:/etc/passwd:ro \
+  -v /etc/group:/etc/group:ro \
+  1hcoj/alert-ssh-login-to-slack:latest \
+  -dry-run
 ```
 
-시간대를 지정하려면:
+Slack 알림을 활성화해서 실행하려면:
 
 ```bash
-sudo --preserve-env=SLACK_BOT_TOKEN,SLACK_CHANNEL_ID \
-  ./bin/ssh-login-alert -timezone Asia/Seoul
+docker run -d \
+  --name ssh-login-alert \
+  --restart unless-stopped \
+  --privileged \
+  --pid=host \
+  -e SLACK_BOT_TOKEN='xoxb-...' \
+  -e SLACK_CHANNEL_ID='C0123456789' \
+  -v /sys/kernel/tracing:/sys/kernel/tracing:rw \
+  -v /sys/fs/bpf:/sys/fs/bpf:rw \
+  -v /etc/passwd:/etc/passwd:ro \
+  -v /etc/group:/etc/group:ro \
+  1hcoj/alert-ssh-login-to-slack:latest \
+  -timezone Asia/Seoul
 ```
 
-## systemd 서비스
+각 옵션이 필요한 이유는 다음과 같습니다.
 
-`ssh-login-alert.service`는 서버 운영 환경에서 에이전트를 안정적으로 실행하기 위한 단위 파일입니다. 필요한 이유는 다음과 같습니다.
-
-- 서버 부팅 후 자동으로 에이전트를 시작합니다.
-- 에이전트가 비정상 종료되면 자동으로 재시작합니다.
-- `/etc/ssh-login-alert.env`에서 Slack 인증 정보를 읽습니다.
-- eBPF 프로그램을 로드하고 tracepoint에 붙이는 데 필요한 capability를 부여합니다.
-
-설치:
-
-```bash
-sudo install -m 0755 bin/ssh-login-alert /usr/local/sbin/ssh-login-alert
-sudo install -m 0644 ssh-login-alert.service /etc/systemd/system/
-sudo sh -c 'printf "%s\n" "SLACK_BOT_TOKEN=xoxb-..." "SLACK_CHANNEL_ID=C0123456789" > /etc/ssh-login-alert.env'
-sudo chmod 0600 /etc/ssh-login-alert.env
-sudo systemctl daemon-reload
-sudo systemctl enable --now ssh-login-alert
-sudo journalctl -u ssh-login-alert -f
-```
-
-일부 구형 커널이나 배포판에서는 capability를 설정해도 root 서비스로 실행해야 할 수 있습니다.
+- `--privileged`: 컨테이너가 eBPF 프로그램을 로드하고 attach할 수 있도록 합니다.
+- `--pid=host`: 호스트 프로세스 가시성과 컨테이너 실행 환경을 맞춥니다.
+- `/sys/kernel/tracing`: eBPF attach 로직이 사용하는 tracepoint 메타데이터를 노출합니다.
+- `/sys/fs/bpf`: 커널/eBPF 스택에서 필요한 host BPF filesystem을 노출합니다.
+- `/etc/passwd`, `/etc/group`: 호스트 UID를 호스트 계정명으로 해석하기 위해 read-only로 마운트합니다.
+- `--restart unless-stopped`: 에이전트 장애 또는 호스트 재부팅 후 Docker daemon이 시작될 때 컨테이너를 다시 실행합니다.
 
 ## 프로젝트 구조
 
@@ -121,11 +115,11 @@ sudo journalctl -u ssh-login-alert -f
 │   └── sshlogin.bpf.c        # execve tracepoint에 붙는 eBPF 프로그램
 ├── bpf_bpfeb.go              # big-endian 대상용 bpf2go 생성 바인딩
 ├── bpf_bpfel.go              # little-endian 대상용 bpf2go 생성 바인딩
+├── Dockerfile                # multi-stage Docker build
 ├── generate.go               # bpf2go 실행용 go:generate 진입점
 ├── main.go                   # 에이전트 생명주기, eBPF attach, ring buffer 처리
 ├── slack.go                  # Slack chat.postMessage 클라이언트
 ├── *_test.go                 # 단위 테스트
-├── ssh-login-alert.service   # 서버 배포용 systemd unit
 ├── Makefile                  # generate/build/test 헬퍼
 ├── LICENSE                   # 저장소 라이선스
 ├── README.md                 # 영어 문서, 메인 README
